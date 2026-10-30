@@ -23,3 +23,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sarabun), sans-serif;
 }
+
+button, [role="button"] {
+  cursor: pointer;
+}

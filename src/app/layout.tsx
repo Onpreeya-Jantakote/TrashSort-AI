@@ -20,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${sarabun.variable} h-full antialiased`}>
-      <body className={`${sarabun.className} min-h-full flex flex-col font-sans`}>{children}</body>
+    <html lang="th" suppressHydrationWarning className={`${sarabun.variable} h-full antialiased`}>
+      <body suppressHydrationWarning className={`${sarabun.className} min-h-full flex flex-col font-sans`}>
+        {children}
+      </body>
     </html>
   );
 }

@@ -1,11 +1,74 @@
 "use client";
 
 import { useState } from "react";
+import WebcamView from "@/components/WebcamView";
 
 type DetectionMode = "webcam" | "upload";
 
+interface WasteCategory {
+  id: "general" | "recycle" | "organic" | "hazardous";
+  name: string;
+  binColorName: string;
+  dotColor: string;
+  bgLight: string;
+  borderColor: string;
+  titleColor: string;
+  description: string;
+}
+
+const WASTE_CATEGORIES: WasteCategory[] = [
+  {
+    id: "general",
+    name: "ขยะทั่วไป",
+    binColorName: "สีน้ำเงิน",
+    dotColor: "bg-blue-500",
+    bgLight: "bg-blue-50/60",
+    borderColor: "border-blue-100",
+    titleColor: "text-blue-900",
+    description: "ซองขนม, ถุงพลาสติกเปื้อน, โฟม, ทิชชู",
+  },
+  {
+    id: "recycle",
+    name: "ขยะรีไซเคิล",
+    binColorName: "สีเหลือง",
+    dotColor: "bg-amber-500",
+    bgLight: "bg-amber-50/60",
+    borderColor: "border-amber-100",
+    titleColor: "text-amber-900",
+    description: "ขวดพลาสติก PET, กระป๋องอลูมิเนียม, กระดาษ, แก้ว",
+  },
+  {
+    id: "organic",
+    name: "ขยะอินทรีย์ / ขยะเปียก",
+    binColorName: "สีเขียว",
+    dotColor: "bg-emerald-500",
+    bgLight: "bg-emerald-50/60",
+    borderColor: "border-emerald-100",
+    titleColor: "text-emerald-900",
+    description: "เศษอาหาร, เปลือกผลไม้, เศษผัก, ใบไม้",
+  },
+  {
+    id: "hazardous",
+    name: "ขยะอันตราย",
+    binColorName: "สีแดง",
+    dotColor: "bg-rose-500",
+    bgLight: "bg-rose-50/60",
+    borderColor: "border-rose-100",
+    titleColor: "text-rose-900",
+    description: "ถ่านไฟฉาย, หลอดไฟ, กระป๋องสเปรย์, สารเคมี",
+  },
+];
+
 export default function Home() {
   const [activeMode, setActiveMode] = useState<DetectionMode>("webcam");
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+
+  const handleModeChange = (mode: DetectionMode) => {
+    setActiveMode(mode);
+    if (mode !== "webcam") {
+      setIsCameraActive(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
@@ -29,14 +92,13 @@ export default function Home() {
         <div className="flex bg-slate-200/80 p-1 rounded-xl w-full sm:w-fit self-center">
           <button
             type="button"
-            onClick={() => setActiveMode("webcam")}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            onClick={() => handleModeChange("webcam")}
+            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
               activeMode === "webcam"
                 ? "bg-white text-emerald-700 shadow-sm"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            {/* Video Camera Icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -55,14 +117,13 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => setActiveMode("upload")}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            onClick={() => handleModeChange("upload")}
+            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
               activeMode === "upload"
                 ? "bg-white text-emerald-700 shadow-sm"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            {/* Image / Upload Icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -81,40 +142,12 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Visual Display Area */}
           <section className="lg:col-span-2 flex flex-col gap-4">
-            <div className="relative aspect-video w-full rounded-2xl border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center p-6 text-center shadow-sm">
-              {activeMode === "webcam" ? (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-7 h-7"
-                    >
-                      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
-                      <rect x="2" y="6" width="14" height="12" rx="2" />
-                    </svg>
-                  </div>
-                  <h2 className="text-base font-bold text-slate-800">พื้นที่แสดงผลกล้องเว็บแคม</h2>
-                  <p className="text-sm text-slate-500 max-w-sm">
-                    กดปุ่มด้านล่างเพื่อเปิดกล้องเว็บแคม สำหรับตรวจจับขยะแบบเรียลไทม์
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl shadow transition"
-                  >
-                    เปิดใช้งานกล้อง
-                  </button>
-                </div>
-              ) : (
+            {activeMode === "webcam" ? (
+              <WebcamView onStreamingChange={setIsCameraActive} />
+            ) : (
+              <div className="relative aspect-video w-full rounded-2xl border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center p-6 text-center shadow-sm">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
                     <svg
@@ -138,19 +171,38 @@ export default function Home() {
                   </p>
                   <button
                     type="button"
-                    className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow transition"
+                    className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow transition cursor-pointer active:scale-95"
                   >
                     เลือกไฟล์ภาพ
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Status Footer */}
             <div className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
               <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-slate-300"></span>
-                สถานะกล้อง: <strong className="text-slate-700">ยังไม่ได้เชื่อมต่อ</strong>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    activeMode === "webcam"
+                      ? isCameraActive
+                        ? "bg-emerald-500 animate-pulse"
+                        : "bg-slate-300"
+                      : "bg-blue-400"
+                  }`}
+                ></span>
+                {activeMode === "webcam" ? (
+                  <>
+                    สถานะกล้อง:{" "}
+                    <strong className={isCameraActive ? "text-emerald-700" : "text-slate-700"}>
+                      {isCameraActive ? "กำลังถ่ายทอดสด (Live)" : "ยังไม่ได้เชื่อมต่อ"}
+                    </strong>
+                  </>
+                ) : (
+                  <>
+                    โหมด: <strong className="text-blue-700">อัปโหลดรูปภาพ</strong>
+                  </>
+                )}
               </span>
               <span>ประมวลผลบนเบราว์เซอร์ (Client-side)</span>
             </div>
@@ -178,37 +230,22 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <div className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 flex gap-3 items-start">
-                  <span className="w-3 h-3 rounded-full bg-blue-500 mt-1.5 shrink-0"></span>
-                  <div>
-                    <h3 className="text-sm font-bold text-blue-900">ขยะทั่วไป (สีน้ำเงิน)</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">ซองขนม, ถุงพลาสติกเปื้อน, โฟม, ทิชชู</p>
+                {WASTE_CATEGORIES.map((category) => (
+                  <div
+                    key={category.id}
+                    className={`p-3 rounded-xl border flex gap-3 items-start transition-all ${category.bgLight} ${category.borderColor}`}
+                  >
+                    <span
+                      className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${category.dotColor}`}
+                    ></span>
+                    <div>
+                      <h3 className={`text-sm font-bold ${category.titleColor}`}>
+                        {category.name} ({category.binColorName})
+                      </h3>
+                      <p className="text-xs text-slate-600 mt-0.5">{category.description}</p>
+                    </div>
                   </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-100 flex gap-3 items-start">
-                  <span className="w-3 h-3 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
-                  <div>
-                    <h3 className="text-sm font-bold text-amber-900">ขยะรีไซเคิล (สีเหลือง)</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">ขวดพลาสติก PET, กระป๋องอลูมิเนียม, กระดาษ, แก้ว</p>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100 flex gap-3 items-start">
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
-                  <div>
-                    <h3 className="text-sm font-bold text-emerald-900">ขยะอินทรีย์ / ขยะเปียก (สีเขียว)</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">เศษอาหาร, เปลือกผลไม้, เศษผัก, ใบไม้</p>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-100 flex gap-3 items-start">
-                  <span className="w-3 h-3 rounded-full bg-rose-500 mt-1.5 shrink-0"></span>
-                  <div>
-                    <h3 className="text-sm font-bold text-rose-900">ขยะอันตราย (สีแดง)</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">ถ่านไฟฉาย, หลอดไฟ, กระป๋องสเปรย์, สารเคมี</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </aside>
