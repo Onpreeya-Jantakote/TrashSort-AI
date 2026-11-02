@@ -54,12 +54,16 @@ next-env.d.ts
 *.h5
 
 # YOLO / Ultralytics runs and outputs
+runs/
 /runs/
 wandb/
 
 # Datasets & caches
+datasets/
 /datasets/
+dataset/
 /dataset/
+data/
 /data/
 *.cache
 labels.cache
