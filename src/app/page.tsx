@@ -3,11 +3,12 @@
 import { useState } from "react";
 import WebcamView from "@/components/WebcamView";
 import ImageUploadView from "@/components/ImageUploadView";
+import type { WasteCategoryType } from "@/types/detection";
 
 type DetectionMode = "webcam" | "upload";
 
 interface WasteCategory {
-  id: "general" | "recycle" | "organic" | "hazardous";
+  id: WasteCategoryType;
   name: string;
   binColorName: string;
   dotColor: string;
