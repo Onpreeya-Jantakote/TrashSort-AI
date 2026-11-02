@@ -19,13 +19,14 @@ export interface UseYoloModelReturn {
   isModelReady: boolean;
 }
 
-const DEFAULT_MODEL_PATH = "/models/yolov8n.onnx";
+const PRIMARY_MODEL_PATH = "/models/waste_yolov8n.onnx";
+const FALLBACK_MODEL_PATH = "/models/yolov8n.onnx";
 
 /**
  * Custom Hook to manage YOLO ONNX model lifecycle and inference
  */
 export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn {
-  const modelPath = options?.modelPath || DEFAULT_MODEL_PATH;
+  const modelPath = options?.modelPath || PRIMARY_MODEL_PATH;
   const confidenceThreshold = options?.confidenceThreshold;
   const iouThreshold = options?.iouThreshold;
 
@@ -52,15 +53,28 @@ export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn 
         ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/";
         ort.env.wasm.numThreads = 1; // 1 thread avoids Cross-Origin-Opener-Policy restrictions
 
-        // Create inference session
-        const session = await ort.InferenceSession.create(modelPath, {
-          executionProviders: ["wasm"],
-        });
+        // Attempt to create inference session with primary model
+        let session: ort.InferenceSession;
+        try {
+          session = await ort.InferenceSession.create(modelPath, {
+            executionProviders: ["wasm"],
+          });
+        } catch (primaryErr) {
+          // If custom model is not available yet, fallback to base model
+          if (modelPath === PRIMARY_MODEL_PATH) {
+            console.warn(`Primary model ${PRIMARY_MODEL_PATH} not found, falling back to ${FALLBACK_MODEL_PATH}`);
+            session = await ort.InferenceSession.create(FALLBACK_MODEL_PATH, {
+              executionProviders: ["wasm"],
+            });
+          } else {
+            throw primaryErr;
+          }
+        }
 
         if (!isCancelled) {
           sessionRef.current = session;
           setModelStatus("ready");
-          console.log("YOLO model loaded successfully:", modelPath);
+          console.log("YOLO model loaded successfully");
         }
       } catch (err: unknown) {
         if (!isCancelled) {

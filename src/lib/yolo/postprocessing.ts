@@ -1,6 +1,6 @@
 import * as ort from "onnxruntime-web";
 import type { DetectionResult } from "@/types/detection";
-import { COCO_CLASSES, getWasteInfo } from "./labels";
+import { COCO_CLASSES, WASTE_MODEL_CLASSES, getWasteInfo, getDisplayLabel } from "./labels";
 import { MODEL_INPUT_SIZE } from "./preprocessing";
 
 // Default thresholds for detection
@@ -145,10 +145,15 @@ export function postprocessYOLO(
   // Remove duplicate boxes using Non-Maximum Suppression (NMS)
   const filteredBoxes = applyNMS(candidates, iouThreshold);
 
+  // Determine class list based on number of channels detected in the ONNX model
+  // If model has 6 classes, it is our custom trained waste model; otherwise fallback to COCO 80
+  const classList = numClasses === 6 ? WASTE_MODEL_CLASSES : COCO_CLASSES;
+
   // Map each box to final DetectionResult format
   return filteredBoxes.map((candidate) => {
-    const label = COCO_CLASSES[candidate.classId] || `Class ${candidate.classId}`;
-    const wasteInfo = getWasteInfo(label);
+    const rawLabel = classList[candidate.classId] || `Class ${candidate.classId}`;
+    const wasteInfo = getWasteInfo(rawLabel);
+    const displayLabel = getDisplayLabel(rawLabel);
 
     return {
       box: {
@@ -157,7 +162,7 @@ export function postprocessYOLO(
         width: Math.round(candidate.width),
         height: Math.round(candidate.height),
       },
-      label,
+      label: displayLabel,
       confidence: Math.round(candidate.confidence * 100) / 100, // Round to 2 decimals e.g. 0.85
       category: wasteInfo.category,
       color: wasteInfo.color,

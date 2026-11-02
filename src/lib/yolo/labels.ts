@@ -20,6 +20,8 @@ export const BIN_COLORS: Record<WasteCategoryType, string> = {
  */
 export const WASTE_LABEL_MAP: Record<string, { category: WasteCategoryType; color: string }> = {
   // Recyclable Waste (Yellow bin)
+  recycle: { category: "recycle", color: BIN_COLORS.recycle },
+  recyclable: { category: "recycle", color: BIN_COLORS.recycle },
   bottle: { category: "recycle", color: BIN_COLORS.recycle },
   can: { category: "recycle", color: BIN_COLORS.recycle },
   cup: { category: "recycle", color: BIN_COLORS.recycle },
@@ -28,8 +30,12 @@ export const WASTE_LABEL_MAP: Record<string, { category: WasteCategoryType; colo
   box: { category: "recycle", color: BIN_COLORS.recycle },
   cardboard: { category: "recycle", color: BIN_COLORS.recycle },
   book: { category: "recycle", color: BIN_COLORS.recycle },
+  metal: { category: "recycle", color: BIN_COLORS.recycle },
+  plastic: { category: "recycle", color: BIN_COLORS.recycle },
 
   // Organic / Wet Waste (Green bin)
+  organic: { category: "organic", color: BIN_COLORS.organic },
+  biodegradable: { category: "organic", color: BIN_COLORS.organic },
   banana: { category: "organic", color: BIN_COLORS.organic },
   apple: { category: "organic", color: BIN_COLORS.organic },
   sandwich: { category: "organic", color: BIN_COLORS.organic },
@@ -40,7 +46,7 @@ export const WASTE_LABEL_MAP: Record<string, { category: WasteCategoryType; colo
   donut: { category: "organic", color: BIN_COLORS.organic },
 
   // General Waste (Blue bin)
-  plastic: { category: "general", color: BIN_COLORS.general },
+  general: { category: "general", color: BIN_COLORS.general },
   bag: { category: "general", color: BIN_COLORS.general },
   wrapper: { category: "general", color: BIN_COLORS.general },
   fork: { category: "general", color: BIN_COLORS.general },
@@ -48,10 +54,48 @@ export const WASTE_LABEL_MAP: Record<string, { category: WasteCategoryType; colo
   spoon: { category: "general", color: BIN_COLORS.general },
 
   // Hazardous Waste (Red bin)
+  hazardous: { category: "hazardous", color: BIN_COLORS.hazardous },
   battery: { category: "hazardous", color: BIN_COLORS.hazardous },
   electronics: { category: "hazardous", color: BIN_COLORS.hazardous },
   spray: { category: "hazardous", color: BIN_COLORS.hazardous },
 };
+
+/**
+ * Classes for Custom Trained Waste Detection Model (Roboflow / Garbage Dataset)
+ */
+export const WASTE_MODEL_CLASSES: string[] = [
+  "biodegradable",
+  "cardboard",
+  "glass",
+  "metal",
+  "paper",
+  "plastic",
+];
+
+/**
+ * Thai localized names for detection badges
+ */
+export const THAI_LABEL_TRANSLATIONS: Record<string, string> = {
+  biodegradable: "ขยะอินทรีย์ (Organic)",
+  cardboard: "กล่องกระดาษ (Cardboard)",
+  glass: "ขวดแก้ว (Glass)",
+  metal: "โลหะ/กระป๋อง (Metal)",
+  paper: "กระดาษ (Paper)",
+  plastic: "พลาสติก (Plastic)",
+  bottle: "ขวด (Bottle)",
+  can: "กระป๋อง (Can)",
+  cup: "แก้ว/ถ้วย (Cup)",
+  box: "กล่อง (Box)",
+  battery: "แบตเตอรี่ (Battery)",
+};
+
+/**
+ * Helper function: Get formatted Thai display name for a detected class
+ */
+export function getDisplayLabel(className: string): string {
+  const normalized = className.toLowerCase().trim();
+  return THAI_LABEL_TRANSLATIONS[normalized] || className;
+}
 
 /**
  * Standard 80 classes of COCO Dataset (used by base YOLOv8 / YOLO11 models)
