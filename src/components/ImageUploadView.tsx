@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { DetectionResult } from "@/types/detection";
+import DetectionOverlay from "./DetectionOverlay";
 
 interface ImageUploadViewProps {
   imageRef?: React.RefObject<HTMLImageElement | null>;
   onImageChange?: (file: File | null, imageUrl: string | null) => void;
+  detections?: DetectionResult[];
+  onDetect?: (imageElement: HTMLImageElement) => void;
+  isDetecting?: boolean;
 }
 
 const MAX_FILE_SIZE_MB = 10;
@@ -13,6 +18,9 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export default function ImageUploadView({
   imageRef: externalImageRef,
   onImageChange,
+  detections = [],
+  onDetect,
+  isDetecting = false,
 }: ImageUploadViewProps) {
   const internalImageRef = useRef<HTMLImageElement | null>(null);
   const imageRef = externalImageRef || internalImageRef;
@@ -23,6 +31,10 @@ export default function ImageUploadView({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
 
   const processFile = (file: File) => {
     setErrorMessage(null);
@@ -125,34 +137,70 @@ export default function ImageUploadView({
             ref={imageRef}
             src={previewUrl}
             alt={selectedFile?.name || "Uploaded Waste"}
-            className="max-w-full max-h-full object-contain"
+            onLoad={(e) => {
+              setNaturalDimensions({
+                width: e.currentTarget.naturalWidth,
+                height: e.currentTarget.naturalHeight,
+              });
+            }}
+            className="max-w-full max-h-full object-contain select-none"
+          />
+
+          {/* AI Bounding Box Overlay */}
+          <DetectionOverlay
+            detections={detections}
+            sourceWidth={naturalDimensions.width}
+            sourceHeight={naturalDimensions.height}
           />
 
           {/* Top toolbar */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none z-30">
             {/* File name and file size */}
-            <div className="pointer-events-auto max-w-[60%] px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs text-slate-200 truncate flex items-center gap-2">
+            <div className="pointer-events-auto max-w-[50%] px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-xs text-slate-200 truncate flex items-center gap-2">
               <span className="truncate">{selectedFile?.name}</span>
               <span className="text-slate-400 shrink-0 text-[11px]">
                 ({((selectedFile?.size || 0) / (1024 * 1024)).toFixed(2)} MB)
               </span>
             </div>
 
-            {/* Change and delete buttons */}
+            {/* Action buttons */}
             <div className="pointer-events-auto flex items-center gap-2">
+              {onDetect && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (imageRef.current) {
+                      onDetect(imageRef.current);
+                    }
+                  }}
+                  disabled={isDetecting}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 text-xs font-bold text-white shadow transition active:scale-95 flex items-center gap-1.5"
+                >
+                  {isDetecting ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      กำลังตรวจจับ...
+                    </>
+                  ) : (
+                    <>
+                      <span>🔍</span> ตรวจจับขยะ (AI)
+                    </>
+                  )}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 text-xs font-semibold text-white transition active:scale-95"
               >
-                เปลี่ยนรูปภาพ
+                เปลี่ยนรูป
               </button>
               <button
                 type="button"
                 onClick={handleClearImage}
                 className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 backdrop-blur-md text-xs font-semibold text-white transition active:scale-95"
               >
-                ลบรูป
+                ลบ
               </button>
             </div>
           </div>

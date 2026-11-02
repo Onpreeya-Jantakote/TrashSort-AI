@@ -1,15 +1,29 @@
 "use client";
 
 import { useWebcam } from "@/hooks/useWebcam";
+import type { DetectionResult } from "@/types/detection";
+import DetectionOverlay from "./DetectionOverlay";
 
 interface WebcamViewProps {
   onStreamingChange?: (isStreaming: boolean) => void;
+  detections?: DetectionResult[];
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
+  isRealtimeActive?: boolean;
+  onToggleRealtime?: () => void;
 }
 
-export default function WebcamView({ onStreamingChange }: WebcamViewProps) {
-  const { videoRef, isStreaming, isLoading, errorMessage, startCamera, stopCamera } = useWebcam({
+export default function WebcamView({
+  onStreamingChange,
+  detections = [],
+  videoRef: externalVideoRef,
+  isRealtimeActive = false,
+  onToggleRealtime,
+}: WebcamViewProps) {
+  const { videoRef: hookVideoRef, isStreaming, isLoading, errorMessage, startCamera, stopCamera } = useWebcam({
     onStreamingChange,
   });
+
+  const videoRef = externalVideoRef || hookVideoRef;
 
   return (
     <div className="relative aspect-video w-full rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden flex flex-col items-center justify-center text-white shadow-sm">
@@ -93,8 +107,32 @@ export default function WebcamView({ onStreamingChange }: WebcamViewProps) {
         </div>
       )}
 
+      {/* Real-time AI Bounding Box Overlay */}
       {isStreaming && (
-        <div className="absolute top-4 right-4 flex items-center gap-2">
+        <DetectionOverlay
+          detections={detections}
+          sourceWidth={videoRef.current?.videoWidth || 1280}
+          sourceHeight={videoRef.current?.videoHeight || 720}
+        />
+      )}
+
+      {isStreaming && (
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-30">
+          {onToggleRealtime && (
+            <button
+              type="button"
+              onClick={onToggleRealtime}
+              className={`px-3 py-1 rounded-full backdrop-blur-sm text-[11px] font-bold transition cursor-pointer active:scale-95 flex items-center gap-1.5 ${
+                isRealtimeActive
+                  ? "bg-emerald-600 text-white shadow"
+                  : "bg-black/60 hover:bg-black/80 text-emerald-300 border border-emerald-500/30"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${isRealtimeActive ? "bg-white animate-ping" : "bg-emerald-400"}`}></span>
+              {isRealtimeActive ? "กำลังตรวจจับสด..." : "⚡ เริ่มตรวจจับสด"}
+            </button>
+          )}
+
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm text-[11px] text-emerald-400 border border-emerald-500/30">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             LIVE

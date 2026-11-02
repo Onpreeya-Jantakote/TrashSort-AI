@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import WebcamView from "@/components/WebcamView";
 import ImageUploadView from "@/components/ImageUploadView";
-import type { WasteCategoryType } from "@/types/detection";
+import { useYoloModel } from "@/hooks/useYoloModel";
+import type { DetectionResult, WasteCategoryType } from "@/types/detection";
 
 type DetectionMode = "webcam" | "upload";
 
@@ -67,9 +68,22 @@ export default function Home() {
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
+  // AI model hook
+  const { modelStatus, runInference, isModelReady } = useYoloModel();
+
+  // AI Detections State
+  const [detections, setDetections] = useState<DetectionResult[]>([]);
+  const [isRealtimeActive, setIsRealtimeActive] = useState<boolean>(false);
+  const [isDetectingImage, setIsDetectingImage] = useState<boolean>(false);
+
+  // Video Ref for real-time webcam frame sampling
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   // Switch between webcam and upload tabs
   const handleModeChange = (mode: DetectionMode) => {
     setActiveMode(mode);
+    setDetections([]);
+    setIsRealtimeActive(false);
     if (mode !== "webcam") {
       setIsCameraActive(false);
     }
@@ -77,14 +91,54 @@ export default function Home() {
 
   // Handle selected image file (save name or clear it)
   const handleImageChange = (file: File | null) => {
+    setDetections([]); // Clear old detections when image changes
     if (file !== null) {
-      // File selected -> save file name
       setUploadedFileName(file.name);
     } else {
-      // No file (user cleared image) -> reset to null
       setUploadedFileName(null);
     }
   };
+
+  // Run AI detection on uploaded image
+  const handleDetectImage = async (imageElement: HTMLImageElement) => {
+    setIsDetectingImage(true);
+    const results = await runInference(imageElement);
+    setDetections(results);
+    setIsDetectingImage(false);
+  };
+
+  // Toggle real-time detection on webcam
+  const handleToggleRealtime = () => {
+    if (!isRealtimeActive) {
+      setIsRealtimeActive(true);
+    } else {
+      setIsRealtimeActive(false);
+      setDetections([]);
+    }
+  };
+
+  // Real-time inference loop: sample a frame every 250ms (4 FPS) to prevent UI lag
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isRealtimeActive && isCameraActive && activeMode === "webcam") {
+      intervalId = setInterval(async () => {
+        if (videoRef.current && videoRef.current.readyState >= 2) {
+          const results = await runInference(videoRef.current);
+          setDetections(results);
+        }
+      }, 250);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isRealtimeActive, isCameraActive, activeMode, runInference]);
+
+  // List of waste categories detected in current view
+  const detectedCategoryIds = detections.map((d) => d.category);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
@@ -162,13 +216,24 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <section className="lg:col-span-2 flex flex-col gap-4">
             {activeMode === "webcam" ? (
-              <WebcamView onStreamingChange={setIsCameraActive} />
+              <WebcamView
+                videoRef={videoRef}
+                onStreamingChange={setIsCameraActive}
+                detections={detections}
+                isRealtimeActive={isRealtimeActive}
+                onToggleRealtime={handleToggleRealtime}
+              />
             ) : (
-              <ImageUploadView onImageChange={handleImageChange} />
+              <ImageUploadView
+                onImageChange={handleImageChange}
+                detections={detections}
+                onDetect={handleDetectImage}
+                isDetecting={isDetectingImage}
+              />
             )}
 
             {/* Status Footer */}
-            <div className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">
               <span className="flex items-center gap-2">
                 <span
                   className={`w-2 h-2 rounded-full ${
@@ -197,7 +262,27 @@ export default function Home() {
                   </>
                 )}
               </span>
-              <span>ประมวลผลบนเบราว์เซอร์ (Client-side)</span>
+
+              {/* AI Model Status */}
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    modelStatus === "ready"
+                      ? "bg-emerald-500"
+                      : modelStatus === "loading"
+                      ? "bg-amber-400 animate-spin"
+                      : modelStatus === "error"
+                      ? "bg-rose-500"
+                      : "bg-slate-300"
+                  }`}
+                ></span>
+                <span className="text-slate-600">
+                  {modelStatus === "ready" && "AI: พร้อมทำงาน (YOLOv8n ONNX)"}
+                  {modelStatus === "loading" && "AI: กำลังเตรียมโมเดล..."}
+                  {modelStatus === "error" && "AI: โหลดโมเดลไม่สำเร็จ"}
+                  {modelStatus === "idle" && "AI: รอเตรียมโมเดล"}
+                </span>
+              </span>
             </div>
           </section>
 
@@ -223,22 +308,39 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {WASTE_CATEGORIES.map((category) => (
-                  <div
-                    key={category.id}
-                    className={`p-3 rounded-xl border flex gap-3 items-start transition-all ${category.bgLight} ${category.borderColor}`}
-                  >
-                    <span
-                      className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${category.dotColor}`}
-                    ></span>
-                    <div>
-                      <h3 className={`text-sm font-bold ${category.titleColor}`}>
-                        {category.name} ({category.binColorName})
-                      </h3>
-                      <p className="text-xs text-slate-600 mt-0.5">{category.description}</p>
+                {WASTE_CATEGORIES.map((category) => {
+                  const isDetected = detectedCategoryIds.includes(category.id);
+
+                  return (
+                    <div
+                      key={category.id}
+                      className={`p-3 rounded-xl border flex gap-3 items-start transition-all duration-300 ${category.bgLight} ${
+                        isDetected
+                          ? "ring-2 ring-emerald-500 border-emerald-400 shadow-md scale-[1.02]"
+                          : category.borderColor
+                      }`}
+                    >
+                      <span
+                        className={`w-3 h-3 rounded-full mt-1.5 shrink-0 ${category.dotColor} ${
+                          isDetected ? "animate-ping" : ""
+                        }`}
+                      ></span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className={`text-sm font-bold ${category.titleColor}`}>
+                            {category.name} ({category.binColorName})
+                          </h3>
+                          {isDetected && (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-[10px] font-bold text-white shrink-0 animate-pulse">
+                              ตรวจพบ!
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-600 mt-0.5">{category.description}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </aside>
