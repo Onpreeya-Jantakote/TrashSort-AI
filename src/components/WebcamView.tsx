@@ -10,6 +10,7 @@ interface WebcamViewProps {
   videoRef?: React.RefObject<HTMLVideoElement | null>;
   isRealtimeActive?: boolean;
   onToggleRealtime?: () => void;
+  onSwitchToUpload?: () => void;
 }
 
 export default function WebcamView({
@@ -18,17 +19,18 @@ export default function WebcamView({
   videoRef: externalVideoRef,
   isRealtimeActive = false,
   onToggleRealtime,
+  onSwitchToUpload,
 }: WebcamViewProps) {
-  const { videoRef: hookVideoRef, isStreaming, isLoading, errorMessage, startCamera, stopCamera } = useWebcam({
+  const { isStreaming, isLoading, errorMessage, startCamera, stopCamera } = useWebcam({
     onStreamingChange,
+    videoRef: externalVideoRef,
   });
-
-  const videoRef = externalVideoRef || hookVideoRef;
 
   return (
     <div className="relative aspect-video w-full rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden flex flex-col items-center justify-center text-white shadow-sm">
       <video
-        ref={videoRef}
+        ref={externalVideoRef}
+        autoPlay
         playsInline
         muted
         suppressHydrationWarning
@@ -58,6 +60,7 @@ export default function WebcamView({
           <p className="text-sm text-slate-400 max-w-sm">
             กดปุ่มด้านล่างเพื่อเปิดกล้องสำหรับการจำแนกขยะแบบเรียลไทม์
           </p>
+
           <button
             type="button"
             onClick={startCamera}
@@ -75,11 +78,9 @@ export default function WebcamView({
         </div>
       )}
 
-      {/* Error State */}
       {errorMessage && !isLoading && (
         <div className="relative z-10 flex flex-col items-center gap-3 p-6 text-center max-w-md">
           <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center">
-            {/* Alert Circle Icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -95,24 +96,36 @@ export default function WebcamView({
               <line x1="12" x2="12.01" y1="16" y2="16" />
             </svg>
           </div>
-          <h3 className="text-sm font-bold text-rose-300">ไม่สามารถเข้าถึงกล้องได้</h3>
+          <h3 className="text-sm font-bold text-rose-300">Camera Error</h3>
           <p className="text-xs text-slate-400 leading-relaxed">{errorMessage}</p>
-          <button
-            type="button"
-            onClick={startCamera}
-            className="mt-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition cursor-pointer active:scale-95"
-          >
-            ลองใหม่อีกครั้ง
-          </button>
+
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              type="button"
+              onClick={startCamera}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition cursor-pointer active:scale-95"
+            >
+              ลองใหม่อีกครั้ง
+            </button>
+
+            {onSwitchToUpload && (
+              <button
+                type="button"
+                onClick={onSwitchToUpload}
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg shadow-sm transition cursor-pointer active:scale-95"
+              >
+                สลับไปโหมดอัปโหลดรูปภาพ 📁
+              </button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Real-time AI Bounding Box Overlay */}
       {isStreaming && (
         <DetectionOverlay
           detections={detections}
-          sourceWidth={videoRef.current?.videoWidth || 1280}
-          sourceHeight={videoRef.current?.videoHeight || 720}
+          sourceWidth={externalVideoRef?.current?.videoWidth || 1280}
+          sourceHeight={externalVideoRef?.current?.videoHeight || 720}
         />
       )}
 

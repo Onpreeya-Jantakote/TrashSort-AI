@@ -41,14 +41,14 @@ export default function ImageUploadView({
 
     // 1. Check file type (JPEG, PNG, or WEBP only)
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setErrorMessage("กรุณาเลือกไฟล์รูปภาพที่เป็น JPG, PNG หรือ WEBP เท่านั้น");
+      setErrorMessage("Please select a valid image file (JPG, PNG, or WEBP only).");
       return;
     }
 
     // 2. Check file size (max 10MB)
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > MAX_FILE_SIZE_MB) {
-      setErrorMessage(`ไฟล์รูปภาพมีขนาดใหญ่เกินไป (${fileSizeMB.toFixed(1)} MB) กรุณาใช้ไฟล์ไม่เกิน ${MAX_FILE_SIZE_MB} MB`);
+      setErrorMessage(`Image file is too large (${fileSizeMB.toFixed(1)} MB). Maximum allowed size is ${MAX_FILE_SIZE_MB} MB.`);
       return;
     }
 

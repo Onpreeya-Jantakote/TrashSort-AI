@@ -22,9 +22,6 @@ export interface UseYoloModelReturn {
 const PRIMARY_MODEL_PATH = "/models/waste_yolov8n.onnx";
 const FALLBACK_MODEL_PATH = "/models/yolov8n.onnx";
 
-/**
- * Custom Hook to manage YOLO ONNX model lifecycle and inference
- */
 export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn {
   const modelPath = options?.modelPath || PRIMARY_MODEL_PATH;
   const confidenceThreshold = options?.confidenceThreshold;
@@ -33,13 +30,9 @@ export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn 
   const [modelStatus, setModelStatus] = useState<ModelStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Store ONNX inference session in Ref so it persists without re-rendering
   const sessionRef = useRef<ort.InferenceSession | null>(null);
-
-  // Flag to prevent overlapping inference calls on consecutive frames
   const isDetectingRef = useRef<boolean>(false);
 
-  // Load ONNX model session on mount
   useEffect(() => {
     let isCancelled = false;
 
@@ -48,19 +41,15 @@ export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn 
       setErrorMessage(null);
 
       try {
-        // Configure WebAssembly backend path to official CDN
-        // This allows downloading required wasm binaries seamlessly in browser
         ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/";
-        ort.env.wasm.numThreads = 1; // 1 thread avoids Cross-Origin-Opener-Policy restrictions
+        ort.env.wasm.numThreads = 1; // 1 thread avoids COOP/COEP header restrictions
 
-        // Attempt to create inference session with primary model
         let session: ort.InferenceSession;
         try {
           session = await ort.InferenceSession.create(modelPath, {
             executionProviders: ["wasm"],
           });
         } catch (primaryErr) {
-          // If custom model is not available yet, fallback to base model
           if (modelPath === PRIMARY_MODEL_PATH) {
             console.warn(`Primary model ${PRIMARY_MODEL_PATH} not found, falling back to ${FALLBACK_MODEL_PATH}`);
             session = await ort.InferenceSession.create(FALLBACK_MODEL_PATH, {
@@ -74,7 +63,6 @@ export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn 
         if (!isCancelled) {
           sessionRef.current = session;
           setModelStatus("ready");
-          console.log("YOLO model loaded successfully");
         }
       } catch (err: unknown) {
         if (!isCancelled) {
@@ -91,7 +79,6 @@ export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn 
 
     loadModel();
 
-    // Cleanup when component unmounts
     return () => {
       isCancelled = true;
       if (sessionRef.current) {
@@ -100,49 +87,33 @@ export function useYoloModel(options?: UseYoloModelOptions): UseYoloModelReturn 
     };
   }, [modelPath]);
 
-  /**
-   * Run object detection on an image or video frame
-   */
   const runInference = useCallback(
     async (source: HTMLVideoElement | HTMLImageElement): Promise<DetectionResult[]> => {
-      // If model is not loaded yet or already busy with previous frame, skip
-      if (!sessionRef.current || modelStatus !== "ready") {
-        return [];
-      }
-
-      if (isDetectingRef.current) {
-        // Skip this frame to avoid UI freezing
+      if (!sessionRef.current || modelStatus !== "ready" || isDetectingRef.current) {
         return [];
       }
 
       isDetectingRef.current = true;
 
       try {
-        // 1. Preprocess: resize to 640x640 and convert to NCHW Float32 tensor
         const { tensor, originalWidth, originalHeight } = prepareInputTensor(source);
 
-        // 2. Build input feeds using model's input layer name
         const inputName = sessionRef.current.inputNames[0];
         const feeds: Record<string, ort.Tensor> = {
           [inputName]: tensor,
         };
 
-        // 3. Run inference with ONNX Runtime Web
         const outputs = await sessionRef.current.run(feeds);
-
-        // 4. Postprocess: extract predictions, filter confidence, run NMS
         const outputName = sessionRef.current.outputNames[0];
         const outputTensor = outputs[outputName];
 
-        const detections = postprocessYOLO(
+        return postprocessYOLO(
           outputTensor,
           originalWidth,
           originalHeight,
           confidenceThreshold,
           iouThreshold
         );
-
-        return detections;
       } catch (err: unknown) {
         console.error("Inference error:", err);
         return [];
