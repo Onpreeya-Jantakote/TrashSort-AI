@@ -61,7 +61,7 @@ export default function WebcamView({ onStreamingChange }: WebcamViewProps) {
         </div>
       )}
 
-      {/* หน้าจอเมื่อเกิดข้อผิดพลาด (Error State) */}
+      {/* Error State */}
       {errorMessage && !isLoading && (
         <div className="relative z-10 flex flex-col items-center gap-3 p-6 text-center max-w-md">
           <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center">

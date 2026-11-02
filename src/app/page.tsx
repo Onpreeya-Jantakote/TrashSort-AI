@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import WebcamView from "@/components/WebcamView";
+import ImageUploadView from "@/components/ImageUploadView";
 
 type DetectionMode = "webcam" | "upload";
 
@@ -16,6 +17,7 @@ interface WasteCategory {
   description: string;
 }
 
+// Waste categories data for educational guide cards
 const WASTE_CATEGORIES: WasteCategory[] = [
   {
     id: "general",
@@ -62,11 +64,24 @@ const WASTE_CATEGORIES: WasteCategory[] = [
 export default function Home() {
   const [activeMode, setActiveMode] = useState<DetectionMode>("webcam");
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
+  // Switch between webcam and upload tabs
   const handleModeChange = (mode: DetectionMode) => {
     setActiveMode(mode);
     if (mode !== "webcam") {
       setIsCameraActive(false);
+    }
+  };
+
+  // Handle selected image file (save name or clear it)
+  const handleImageChange = (file: File | null) => {
+    if (file !== null) {
+      // File selected -> save file name
+      setUploadedFileName(file.name);
+    } else {
+      // No file (user cleared image) -> reset to null
+      setUploadedFileName(null);
     }
   };
 
@@ -75,7 +90,8 @@ export default function Home() {
       <header className="border-b border-slate-200 bg-white sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            {/* App Logo */}
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-2xl select-none">
               ♻️
             </div>
             <div>
@@ -147,36 +163,7 @@ export default function Home() {
             {activeMode === "webcam" ? (
               <WebcamView onStreamingChange={setIsCameraActive} />
             ) : (
-              <div className="relative aspect-video w-full rounded-2xl border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center p-6 text-center shadow-sm">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-7 h-7"
-                    >
-                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                      <circle cx="9" cy="9" r="2" />
-                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                    </svg>
-                  </div>
-                  <h2 className="text-base font-bold text-slate-800">อัปโหลดรูปภาพขยะ</h2>
-                  <p className="text-sm text-slate-500 max-w-sm">
-                    เลือกไฟล์ภาพจากคอมพิวเตอร์ของคุณ (รองรับ JPG, PNG, WEBP)
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow transition cursor-pointer active:scale-95"
-                  >
-                    เลือกไฟล์ภาพ
-                  </button>
-                </div>
-              </div>
+              <ImageUploadView onImageChange={handleImageChange} />
             )}
 
             {/* Status Footer */}
@@ -188,7 +175,9 @@ export default function Home() {
                       ? isCameraActive
                         ? "bg-emerald-500 animate-pulse"
                         : "bg-slate-300"
-                      : "bg-blue-400"
+                      : uploadedFileName
+                      ? "bg-blue-500"
+                      : "bg-slate-300"
                   }`}
                 ></span>
                 {activeMode === "webcam" ? (
@@ -200,7 +189,10 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    โหมด: <strong className="text-blue-700">อัปโหลดรูปภาพ</strong>
+                    โหมดอัปโหลด:{" "}
+                    <strong className={uploadedFileName ? "text-blue-700 truncate max-w-[200px]" : "text-slate-700"}>
+                      {uploadedFileName ? `เลือกรูปภาพแล้ว (${uploadedFileName})` : "รอเลือกรูปภาพ..."}
+                    </strong>
                   </>
                 )}
               </span>

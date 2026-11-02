@@ -15,32 +15,39 @@ export interface UseWebcamReturn {
   stopCamera: () => void;
 }
 
+/**
+ * Custom Hook to control webcam stream using WebRTC MediaDevices API
+ */
 export function useWebcam(options?: UseWebcamOptions): UseWebcamReturn {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Start webcam video stream
   const startCamera = async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
+    // Check if browser supports camera API
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setErrorMessage("เบราว์เซอร์นี้ไม่รองรับการเปิดกล้องเว็บแคม");
+      setErrorMessage("Your browser does not support webcam access.");
       setIsLoading(false);
       return;
     }
 
     try {
+      // Request camera stream from browser
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: "environment",
+          facingMode: "environment", // Prefer back camera on phones
         },
-        audio: false,
+        audio: false, // We only need video, no audio
       });
 
+      // Attach stream to video element
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.muted = true;
@@ -48,20 +55,21 @@ export function useWebcam(options?: UseWebcamOptions): UseWebcamReturn {
         setIsStreaming(true);
         options?.onStreamingChange?.(true);
       } else {
+        // If component unmounted before camera opened, stop track immediately
         stream.getTracks().forEach((track) => track.stop());
       }
     } catch (err: unknown) {
       console.error("Camera access error:", err);
       if (err instanceof Error) {
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-          setErrorMessage("คุณปฏิเสธการเข้าถึงกล้อง กรุณาอนุญาตสิทธิ์การใช้กล้องในเบราว์เซอร์");
+          setErrorMessage("Camera access was denied. Please allow camera permissions in browser.");
         } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-          setErrorMessage("ไม่พบอุปกรณ์กล้องบนคอมพิวเตอร์หรือมือถือของคุณ");
+          setErrorMessage("No camera device found on this computer or phone.");
         } else {
-          setErrorMessage(`ไม่สามารถเปิดกล้องได้: ${err.message}`);
+          setErrorMessage(`Unable to start camera: ${err.message}`);
         }
       } else {
-        setErrorMessage("เกิดข้อผิดพลาดในการเปิดกล้อง");
+        setErrorMessage("An unknown error occurred while opening camera.");
       }
       setIsStreaming(false);
       options?.onStreamingChange?.(false);
@@ -70,9 +78,11 @@ export function useWebcam(options?: UseWebcamOptions): UseWebcamReturn {
     }
   };
 
+  // Stop camera and turn off hardware light
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
+      // Stop all tracks to turn off camera
       stream.getTracks().forEach((track) => track.stop());
       videoRef.current.srcObject = null;
     }
@@ -80,6 +90,7 @@ export function useWebcam(options?: UseWebcamOptions): UseWebcamReturn {
     options?.onStreamingChange?.(false);
   };
 
+  // Stop camera automatically when user leaves or switches tabs
   useEffect(() => {
     return () => {
       stopCamera();
